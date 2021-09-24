@@ -25,7 +25,7 @@ In this study, isolates are from 9 Gambian and 2 Senegalese locations, we aimed 
 ***  
 
 
-### ** cloning into the repository and preparing for the analysis**     
+### cloning into the repository and preparing for the analysis    
 ```{bash eval = FALSE}
 git clone git@github.com:FellouMada/Malaria-transmission-analysis.git     
 cd transmission_analysis          
