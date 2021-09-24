@@ -18,7 +18,7 @@ This includes SNPs filtration based on their MAF (minor allele frequencies), the
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _2 `pdf` files (plots of SNPs and isolates missingness and MAF) and a text file named `MyGenotype.txt`_       
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**        
 ```{bash eval = FALSE}
-Rscript Filter_data.R Data/file.vcf.gz 0.01 20 Results/ 15      
+Rscript Filter_data.R ./Data/file.vcf.gz 0.01 20 ./Results/ 15      
 ```
 
 ***         
@@ -34,7 +34,7 @@ The input VCF file will be filtered so that it contains only the SNPs and isolat
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _the filtered VCF file (file with a prefix `Passed_QC_genotypes`), 2 `pdf` files (Fws plots)_       
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**        
 ```{bash eval = FALSE}
-Rscript Compute_COI.R Results/MyGenotype.txt Data/MyDelgeme4.vcf.gz Data/SampleMetadata.txt Data/Pop_Order.txt    
+Rscript Compute_COI.R ./Results/MyGenotype.txt ./Data/MyDelgeme4.vcf.gz ./Data/SampleMetadata.txt ./Data/Pop_Order.txt    
 ```
 
 ***  
@@ -55,7 +55,7 @@ Note that for the first and third method, when the frequencies of the 2 alleles 
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates `RDS` files with the recoded genotype data, 1 for each population_    
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**           
 ```{bash eval = FALSE}
-Rscript Construct_Genotype_File.R Results/Passed_QC_genotypes.vcf.gz Results/GenotypeFiles Data/SampleMetadata.txt Data/Resistance_Gene.txt raw   
+Rscript Construct_Genotype_File.R ./Results/Passed_QC_genotypes.vcf.gz ./Results/GenotypeFiles ./Data/SampleMetadata.txt ./Data/Resistance_Gene.txt raw   
 ```
 
 ***  
@@ -73,7 +73,7 @@ Before running this stage, make sure the `runSim.sh` is edited according to your
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates `RDS` files within different folders, 1 for each pair of populations_    
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**        
 ```{bash eval = FALSE}
-Rscript Run_Relatedness.R Results/Raw_Genotypes Results/IBD_folder Data/Pop_Order.txt raw      
+Rscript Run_Relatedness.R ./Results/Raw_Genotypes ./Results/IBD_folder ./Data/Pop_Order.txt raw      
 ```
 
 ***  
@@ -87,7 +87,7 @@ When estimating relatedness, pairs of samples from 2 populations are splitted an
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates `RDS` files within output folders_    
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**        
 ```{bash eval = FALSE}
-Rscript Summarize_IBD_Files.R Results/IBD_folder/From_raw_Data Results/IBD_folder/From_raw_Data/Summarized  
+Rscript Summarize_IBD_Files.R ./Results/IBD_folder/From_raw_Data ./Results/IBD_folder/From_raw_Data/Summarized  
 ```
 
 ***
@@ -101,7 +101,7 @@ We set a relatedness cut-off (in our case, we varied the cut-off from 0.2 to 0.6
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates several `RDS` files within output folders. Among these, will be interested in the once with a suffix `_All_Pairs.RDS`_        
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**          
 ```{bash eval = FALSE}
-Rscript Identify_HRPI.R Results/IBD_folder/From_raw_Data/Summarized Data/SampleMetadata.txt  
+Rscript Identify_HRPI.R ./Results/IBD_folder/From_raw_Data/Summarized ./Data/SampleMetadata.txt  
 ```
 
 ***
@@ -115,7 +115,7 @@ Files from the above step (6) will be combined into one single file that will be
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates `RDS` files within a folder named `Combined/`_    
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**        
 ```{bash eval = FALSE}
-Rscript Combine_Relatedness_Files.R Results/IBD_folder/From_raw_Data/Summarized Data/PhysicalDistanceBetweenLocations.txt    
+Rscript Combine_Relatedness_Files.R ./Results/IBD_folder/From_raw_Data/Summarized ./Data/PhysicalDistanceBetweenLocations.txt    
 ```
 
 
@@ -346,7 +346,7 @@ In order to plot the relatedness between 1 isolate and others, the data needs to
 &nbsp;&nbsp;&nbsp;&nbsp;**Outputs:** _creates an `RDS` file with the prefix chosen by the user_     
 &nbsp;&nbsp;&nbsp;&nbsp;**Example:**          
 ```{bash eval = FALSE}
-Rscript Create_relatedness_matrix.R Results/RelatednessFolder/All_Relatedness_From_Raw.RDS Data/SampleMetadata.txt 0.3 Results/RelatednessFolder rMatrixFrom_Raw
+Rscript Create_relatedness_matrix.R ./Results/RelatednessFolder/All_Relatedness_From_Raw.RDS ./Data/SampleMetadata.txt 0.3 ./Results/RelatednessFolder rMatrixFrom_Raw
 ```
 
 ###### **9.1. drawing the mean relatedness as a heatmap **   
