@@ -27,7 +27,7 @@ In this study, isolates are from 9 Gambian and 2 Senegalese locations, we aimed 
 
 ### ** cloning into the repository and preparing for the analysis**     
 ```{bash eval = FALSE}
-git clone https://gitlab.internal.sanger.ac.uk/km28/transmission_analysis.git          
+git clone https://github.com/FellouMada/Malaria-transmission-analysis        
 cd transmission_analysis          
 mkdir Results/ Data/       
 cp your/input/vcf/file.vcf.gz Data/    
