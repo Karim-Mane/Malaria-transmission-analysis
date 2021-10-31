@@ -356,10 +356,9 @@ Rscript Create_relatedness_matrix.R ./Results/RelatednessFolder/All_Relatedness_
 
 ###### **9.1. drawing the mean relatedness as a heatmap **   
 ```{r echo = FALSE} 
-suppressPackageStartupMessages(expr = "")
-library(ggplot2)
-library(reshape2)
-library(data.table)
+suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(reshape2))
+suppressPackageStartupMessages(library(data.table))
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 rMatrix = readRDS(paste0(relatednessDir,'/rMatrixFrom_Raw.RDS'))
 meta=fread(paste0(relatednessDir,"/SampleMetadata.txt"))
@@ -462,10 +461,10 @@ ggplot(data = meltedMatIBD, aes(Var2, Var1, fill = value))+
 
 ##### **9.2. population structure**
 ```{r echo=FALSE}
-suppressPackageStartupMessages(expr = "")
-library(umap)
-library(data.table)
-library(ggplot2)
+suppressPackageStartupMessages(library(umap))
+
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(library(ggplot2))
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 rMatrix = readRDS(paste0(relatednessDir,'/rMatrixFrom_Raw.RDS'))
 meta=fread(paste0(relatednessDir,"/SampleMetadata.txt"))
@@ -497,9 +496,8 @@ ggplot(kk, aes(x=V1, y=V2, color=V3)) +
 
 ###### **9.3. determination of the proportion of HRI between pairs of populations **   
 ```{r echo = FALSE}
-suppressPackageStartupMessages(expr = "")
-library(data.table)
-require(knitr)
+suppressPackageStartupMessages(library(data.table))
+suppressPackageStartupMessages(require(knitr))
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 raw = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Raw.RDS"))
 raw$`rMaf>30` = as.numeric(raw$`rMaf>30`)
@@ -600,17 +598,24 @@ ggplot(nhriByRegion, aes(x = reorder(pairsRegion, -`%HRI`), y = `%HRI`, fill = `
 
 ### **10. spatial analysis (drawing connectivity using the proportion of HRI) **     
 ```{r echo=FALSE}  
-suppressPackageStartupMessages(expr = "")
-require("raster")
-require("rgdal")
-require("dplyr")
-require("data.table")
-require(knitr)
+suppressPackageStartupMessages(require("raster"))
+
+suppressPackageStartupMessages(require("rgdal"))
+suppressPackageStartupMessages(require("dplyr"))
+suppressPackageStartupMessages(require("data.table"))
+suppressPackageStartupMessages(require(knitr))
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 relatednessTable = readRDS(paste0(relatednessDir,'/Loc_PropHRI.RDS'))
 relatednessTable$LineWidth = relatednessTable$pHRI*150
 gps = fread(paste0(relatednessDir,"/GPScoordinates.txt"))
 gmb = getData(name = "GADM", country = "GMB", level=0)
+
+# creating the site connector lines
+tmp_gps = gps
+names(tmp_gps) = c('Lat','Long','name')
+source(paste0(relatednessDir,"/Get_Lines_Connectors.R"))
+system(sprinft("mkdir -p %s", paste0(relatednessDir,"/SiteConnectors")))
+curvedLines(tmp_gps, paste0(relatednessDir,"/SiteConnectors"))  #note that this requires python3 to be installed on your machine
 
 
 withiGambia1 = relatednessTable[which(relatednessTable$site1!='Thies' & relatednessTable$site1!='Bounkiling'), ]
