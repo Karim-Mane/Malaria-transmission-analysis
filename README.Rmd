@@ -120,39 +120,132 @@ Rscript Combine_Relatedness_Files.R ./Results/IBD_folder/From_raw_Data/Summarize
 
 ***
 
-### **8. Analysis section **    
-###### **8.1. get the file to use for analysis       
+### **8. Analysis section **  
+
+###### **8.1. Fws by region **
+```{r echo = FALSE, eval = TRUE}
+suppressPackageStartupMessages(require(data.table))
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(rstatix))
+suppressPackageStartupMessages(require(ggpubr))
+
+#----- determining the proportion of monoclonal isolates by location
+transmissionDir = "/Users/km28/Documents/Karim/Karim/Gitlab/Transmission"
+myFws = fread(paste0(transmissionDir,"/Fws_COI.txt"))
+#note that with the new version this should be replaced by the line below
+#myFws = readRDS(paste0(transmissionDir,"/Fws_COI.RDS"))
+myFws$status="polyclonal"
+myFws[which(myFws$Fws>0.95),]$status='monoclonal'
+message("Percentage of monoclonal isolates: ",nrow(myFws[which(myFws$Fws>0.95),])/nrow(myFws))
+t = table(myFws$Location, myFws$status)
+t = as.matrix(t)
+pmono = round((t[,1]/rowSums(t))*100, 3); ppoly = round((t[,2]/rowSums(t))*100, 3)
+t = cbind(t, pmono, ppoly)
+colnames(t) = c('#monoclonal','#polyclonal','%monoclonal','%polyclonal')
+saveRDS(t, paste0(transmissionDir,'/','Populations_COI_Status.RDS'))
+sites = rep(rownames(t),2)
+ps = c(t[,3],t[,4])
+st = c(rep('monoclonal',nrow(t)), rep('polyclonal',nrow(t)))
+data = data.frame(cbind(sites,ps, st))
+names(data)=c('location','proportion','state')
+p=ggplot(data, aes(fill=state, y=proportion, x=location)) + 
+    geom_bar(position="dodge", stat="identity")
+pdf(paste0(transmissionDir,'/','Populations_COI_Status.pdf'))
+print(p)
+dev.off()
+
+
+# --- comparing mean Fws between regions
+myFws$regions = "Senegal"
+myFws[which(myFws$Location=='Brikama' | myFws$Location=='Besse'),]$regions='Western'
+myFws[which(myFws$Location=='Basse' | myFws$Location=='Njayel' | myFws$Location=='SareWuro'),]$regions='Eastern'
+myFws[which(myFws$Location=='Serrekunda' | myFws$Location=='Farafenni'),]$regions='Ancient'
+myFws[which(myFws$Location=='DongoroBa' | myFws$Location=='Chogen'),]$regions='Central'
+myFws$regions = as.factor(myFws$regions)
+myFws$Fws = as.numeric(myFws$Fws)
+myFws$regions = factor(myFws$regions, levels = c("Western", "Central", "Eastern", "Ancient", "Senegal"))
+# note that we will consider the adjusted p-values 
+stat.test = myFws %>% wilcox_test(Fws ~ regions, p.adjust.method = "bonferroni")
+saveRDS(stat.test, "/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/Fws_Stat_ByRegion.RDS")
+bxp = ggboxplot(myFws, x="regions", y="Fws", fill = "regions",
+                palette = c("#00AFBB", "black", "#FC4E07", "#E7B800","gray"),
+                ylab = "Fws", xlab = "regions",
+                font.tickslab = c(14,"bold", "black")) +
+    stat_pvalue_manual(
+        stat.test, label = "p.adj.signif", tip.length = 0.01,
+        y.position = c(1.1, 1.2, 1.5,1.6,1.1,1.3,1.4,1.1,1.2,1.1), bracket.shorten = 0.05
+    ) +
+    theme(
+        legend.position = "none") +
+    theme(axis.text.x = element_text(angle = 60, hjust = 1))
+pdf(paste0(transmissionDir,"/Fws_Stat_ByRegion.pdf"))
+print(bxp)
+dev.off()
+```
+###### **8.2. get the file to use for analysis       
 ```{r echo = FALSE, eval = TRUE}
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 #for raw data 
 #---
 #In this directory, 'Between_Pop_Combined_0.6.RDS' is the relatedness file between locations, No within location relatedness
-#'Combined_0.6.RDS' is the file with all relatedness inclusing within population
+#'Combined_0.6.RDS' is the file with all relatedness including within population
 #---
 #relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 system(sprintf("mkdir -p %s", relatednessDir)) 
-relatedness = readRDS(paste0(relatednessDir,"/Combined_0.6.RDS"))   
+relatedness = readRDS(paste0(relatednessDir,"/Combined_0.6_From_Raw.RDS"))   
 allPairs_From_Raw = relatedness[[1]]   
 saveRDS(allPairs_From_Raw, paste0(relatednessDir,"/All_Relatedness_From_Raw.RDS"))  
 rm(relatedness)
 
 #for minor_David data  
-#relatedness = readRDS("/lustre/scratch117/casm/team273/km28/Karim/transmission_analysis/Results/IBD_folder/From_minor_#David_Data/Summarized/Combined/Combined_0.6.RDS")   
-#allPairs_From_Raw = relatedness[[1]]   
-#saveRDS(allPairs_From_Raw, paste0(relatednessDir,"/All_Relatedness_From_Minor_David.RDS")) 
+relatedness = readRDS(paste0(relatednessDir,"/Combined_0.6_From_minor_David.RDS"))   
+allPairs_From_minor_David = relatedness[[1]]   
+saveRDS(allPairs_From_minor_David, paste0(relatednessDir,"/All_Relatedness_From_Minor_David.RDS")) 
 
 #for minor_Karim data   
-#relatedness = readRDS("/lustre/scratch117/casm/team273/km28/Karim/transmission_analysis/Results/IBD_folder/From_minor_#Karim_Data/Summarized/Combined/Combined_0.6.RDS")   
-#allPairs_From_Raw = relatedness[[1]]   
-#saveRDS(allPairs_From_Raw, paste0(relatednessDir,"/All_Relatedness_From_Minor_Karim.RDS")) 
+relatedness = readRDS(paste0(relatednessDir,"/Combined_0.6_From_Minor_Karim.RDS"))   
+allPairs_From_Raw = relatedness[[1]]   
+saveRDS(allPairs_From_Raw, paste0(relatednessDir,"/All_Relatedness_From_Minor_Karim.RDS")) 
 ```
 
-###### **8.2. determining MAF cut-off (by comparing the results from the different mixed genotypes recoding methods against the results from raw data)       
+###### **8.3. determining MAF cut-off (by comparing the results from the different mixed genotypes recoding methods against the results from raw data)   
+
 ```{r echo = FALSE, eval = FALSE}
+suppressPackageStartupMessages(require(data.table))
+suppressPackageStartupMessages(require(ggplot2))
+suppressPackageStartupMessages(require(pheatmap))
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 raw = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Raw.RDS"))    
 minorDavid = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Minor_David.RDS"))    
-minorKarim = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Minor_Karim.RDS"))     
+minorKarim = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Minor_Karim.RDS"))  
+#--- X will be the matrix of mean relatedness for every MAF cut-off
+X = matrix(0, 3, 5)
+rownames(X) = c("raw", "minor_David", "minor_Karim")
+colnames(X) = c("MAF>0%","MAF>10%","MAF>20%","MAF>30%","MAF>40%")
+X[1,1] = mean(as.numeric(raw$`rMaf>0`), na.rm = TRUE)
+X[1,2] = mean(as.numeric(raw$`rMaf>10`), na.rm = TRUE)
+X[1,3] = mean(as.numeric(raw$`rMaf>20`), na.rm = TRUE)
+X[1,4] = mean(as.numeric(raw$`rMaf>30`), na.rm = TRUE)
+X[1,5] = mean(as.numeric(raw$`rMaf>40`), na.rm = TRUE)
+
+X[2,1] = mean(as.numeric(minorDavid$`rMaf>0`), na.rm = TRUE)
+X[2,2] = mean(as.numeric(minorDavid$`rMaf>10`), na.rm = TRUE)
+X[2,3] = mean(as.numeric(minorDavid$`rMaf>20`), na.rm = TRUE)
+X[2,4] = mean(as.numeric(minorDavid$`rMaf>30`), na.rm = TRUE)
+X[2,5] = mean(as.numeric(minorDavid$`rMaf>40`), na.rm = TRUE)
+
+X[3,1] = mean(as.numeric(minorKarim$`rMaf>0`), na.rm = TRUE)
+X[3,2] = mean(as.numeric(minorKarim$`rMaf>10`), na.rm = TRUE)
+X[3,3] = mean(as.numeric(minorKarim$`rMaf>20`), na.rm = TRUE)
+X[3,4] = mean(as.numeric(minorKarim$`rMaf>30`), na.rm = TRUE)
+X[3,5] = mean(as.numeric(minorKarim$`rMaf>40`), na.rm = TRUE)
+
+pdf(paste0(paste0(relatednessDir,"/Heatmap_r_maf_recodingMethod.pdf")))
+pheatmap(X, cluster_cols = FALSE, cluster_rows = FALSE)
+dev.off()
+
+saveRDS(X, paste0(relatednessDir,"/Mean_relatedness_by_recoding_method_and_Maf_cutoff.RDS"))
 
 #between raw and minorDavid
 raw = as.data.table(raw); setkeyv(raw,c('iid1','iid2'))  
@@ -212,6 +305,7 @@ p4 = ggplot(joined, aes(x=joined$`rMaf>30`, y=joined$`i.rMaf>30`)) +
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
     ggtitle(paste0("raw vs minor_David; MAF>30%; correlation coefficient=",round(cor(joined$`rMaf>30`, joined$`i.rMaf>30`), digits = 2))) +
+  theme(plot.title = element_text(size = 5, face = "bold")) +
     xlab("raw") +ylab("minor_David") +
     theme(
         plot.background = element_blank(),
@@ -220,7 +314,9 @@ p4 = ggplot(joined, aes(x=joined$`rMaf>30`, y=joined$`i.rMaf>30`)) +
         panel.border = element_blank(),
         panel.background = element_blank()
     ) +
-    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid'))
+    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid')) +
+    theme(axis.text.x = element_text(face="bold", color="black"), #, size=14
+        axis.text.y = element_text(face="bold", color="black")) #, size=14
     
 joined$`rMaf>40` = as.numeric(joined$`rMaf>40`)       
 joined$`i.rMaf>40` = as.numeric(joined$`i.rMaf>40`)      
@@ -253,8 +349,8 @@ joined$`i.rMaf>0` = as.numeric(joined$`i.rMaf>0`)
 p1 = ggplot(joined, aes(x=joined$`rMaf>0`, y=joined$`i.rMaf>0`)) + 
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
-    ggtitle(paste0("raw vs minor_David; MAF>0%; correlation coefficient=",round(cor(joined$`rMaf>0`, joined$`i.rMaf>0`), digits = 2))) +
-    xlab("raw") +ylab("minor_David") +
+    ggtitle(paste0("raw vs minor_Karim; MAF>0%; correlation coefficient=",round(cor(joined$`rMaf>0`, joined$`i.rMaf>0`), digits = 2))) +
+    xlab("raw") +ylab("minor_Karim") +
     theme(
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
@@ -269,8 +365,8 @@ joined$`i.rMaf>10` = as.numeric(joined$`i.rMaf>10`)
 p2 = ggplot(joined, aes(x=joined$`rMaf>10`, y=joined$`i.rMaf>10`)) + 
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
-    ggtitle(paste0("raw vs minor_David; MAF>10%; correlation coefficient=",round(cor(joined$`rMaf>10`, joined$`i.rMaf>10`), digits = 2))) +
-    xlab("raw") +ylab("minor_David") +
+    ggtitle(paste0("raw vs minor_Karim; MAF>10%; correlation coefficient=",round(cor(joined$`rMaf>10`, joined$`i.rMaf>10`), digits = 2))) +
+    xlab("raw") +ylab("minor_Karim") +
     theme(
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
@@ -285,8 +381,8 @@ joined$`i.rMaf>20` = as.numeric(joined$`i.rMaf>20`)
 p3 = ggplot(joined, aes(x=joined$`rMaf>20`, y=joined$`i.rMaf>20`)) + 
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
-    ggtitle(paste0("raw vs minor_David; MAF>20%; correlation coefficient=",round(cor(joined$`rMaf>20`, joined$`i.rMaf>20`), digits = 2))) +
-    xlab("raw") +ylab("minor_David") +
+    ggtitle(paste0("raw vs minor_Karim; MAF>20%; correlation coefficient=",round(cor(joined$`rMaf>20`, joined$`i.rMaf>20`), digits = 2))) +
+    xlab("raw") +ylab("minor_Karim") +
     theme(
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
@@ -301,8 +397,9 @@ joined$`i.rMaf>30` = as.numeric(joined$`i.rMaf>30`)
 p4 = ggplot(joined, aes(x=joined$`rMaf>30`, y=joined$`i.rMaf>30`)) + 
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
-    ggtitle(paste0("raw vs minor_David; MAF>30%; correlation coefficient=",round(cor(joined$`rMaf>30`, joined$`i.rMaf>30`), digits = 2))) +
-    xlab("raw") +ylab("minor_David") +
+    ggtitle(paste0("raw vs minor_Karim; MAF>30%; correlation coefficient=",round(cor(joined$`rMaf>30`, joined$`i.rMaf>30`), digits = 2))) +
+    theme(plot.title = element_text(size = 5, face = "bold")) +
+    xlab("raw") +ylab("minor_Karim") +
     theme(
         plot.background = element_blank(),
         panel.grid.major = element_blank(),
@@ -310,14 +407,16 @@ p4 = ggplot(joined, aes(x=joined$`rMaf>30`, y=joined$`i.rMaf>30`)) +
         panel.border = element_blank(),
         panel.background = element_blank()
     ) +
-    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid'))
+    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid')) +
+    theme(axis.text.x = element_text(face="bold", color="black"), #, size=14
+        axis.text.y = element_text(face="bold", color="black")) #, size=14
     
 joined$`rMaf>40` = as.numeric(joined$`rMaf>40`)       
 joined$`i.rMaf>40` = as.numeric(joined$`i.rMaf>40`)      
 p5 = ggplot(joined, aes(x=joined$`rMaf>40`, y=joined$`i.rMaf>40`)) + 
     geom_point(shape=19, size=0.1) +
     geom_smooth(method=lm,  linetype="dashed",color="darkred", fill="blue") +
-    ggtitle(paste0("raw vs minor_David; MAF>40%; correlation coefficient=",round(cor(joined$`rMaf>40`, joined$`i.rMaf>40`), digits = 2))) +
+    ggtitle(paste0("raw vs minor_Karim; MAF>40%; correlation coefficient=",round(cor(joined$`rMaf>40`, joined$`i.rMaf>40`), digits = 2))) +
     xlab("raw") +ylab("minor_David") +
     theme(
         plot.background = element_blank(),
@@ -359,6 +458,7 @@ Rscript Create_relatedness_matrix.R ./Results/RelatednessFolder/All_Relatedness_
 suppressPackageStartupMessages(library(ggplot2))
 suppressPackageStartupMessages(library(reshape2))
 suppressPackageStartupMessages(library(data.table))
+
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 rMatrix = readRDS(paste0(relatednessDir,'/rMatrixFrom_Raw.RDS'))
 meta=fread(paste0(relatednessDir,"/SampleMetadata.txt"))
@@ -452,7 +552,7 @@ ggplot(data = meltedMatIBD, aes(Var2, Var1, fill = value))+
         panel.background = element_blank(),
         axis.ticks = element_blank(),
         legend.justification = c(1, 0),
-        legend.position = c(1.1, 0.2),
+        legend.position = c(1, 0.1),
         legend.direction = "vertical") #+
     #geom_text(aes(Var2, Var1, label = isolates), color = "black", size = 4) 
 
@@ -462,9 +562,9 @@ ggplot(data = meltedMatIBD, aes(Var2, Var1, fill = value))+
 ##### **9.2. population structure**
 ```{r echo=FALSE}
 suppressPackageStartupMessages(library(umap))
-
 suppressPackageStartupMessages(library(data.table))
 suppressPackageStartupMessages(library(ggplot2))
+
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 rMatrix = readRDS(paste0(relatednessDir,'/rMatrixFrom_Raw.RDS'))
 meta=fread(paste0(relatednessDir,"/SampleMetadata.txt"))
@@ -472,23 +572,38 @@ modifier = function(x){gsub('-','.',x)}
 meta$SampleID=lapply(meta$SampleID,modifier)
 
 rMatrix[is.na(rMatrix)]=0
-kk = umap(rMatrix)
+custom_config = umap.defaults
+custom_config$n_components = 3
+kk = umap(rMatrix, config = custom_config)
 kk = kk$layout
 m=match(rownames(kk), meta$SampleID)
 kk = cbind(kk, meta$Location[m])
 kk = as.data.frame(kk, stringsAsFactors = FALSE)
 kk$V1=as.numeric(kk$V1)
 kk$V2=as.numeric(kk$V2)
-kk$V3=as.factor(kk$V3)
+kk$V3=as.numeric(kk$V3)
+kk$V4=as.factor(kk$V4)
 rownames(kk)=NULL
-ggplot(kk, aes(x=V1, y=V2, color=V3)) + 
+ggplot(kk, aes(x=V1, y=V3, color=V4)) + 
   geom_point() + 
   scale_color_manual(name="Location",values=c("steelblue", "red",     "magenta","blue","black","green","yellow","gray","cyan","purple","orange")) +
-  theme_bw()+
-  theme_linedraw() +
+  # theme_bw()+
+  # theme_linedraw() +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.5))+
   theme( axis.line = element_line(colour = "gray", size = 0.5, linetype = "solid")) +
-  xlab("PC1") + ylab("PC2")
+  xlab("PC1") + ylab("PC2") +
+  # theme(plot.title = element_text(size = 5, face = "bold")) +
+  # xlab("raw") +ylab("minor_Karim") +
+  theme(
+        plot.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()
+    ) +
+    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid')) +
+    theme(axis.text.x = element_text(face="bold", color="black"), #, size=14
+        axis.text.y = element_text(face="bold", color="black")) #, size=14
 ```
 
 
@@ -497,7 +612,10 @@ ggplot(kk, aes(x=V1, y=V2, color=V3)) +
 ###### **9.3. determination of the proportion of HRI between pairs of populations **   
 ```{r echo = FALSE}
 suppressPackageStartupMessages(library(data.table))
-suppressPackageStartupMessages(require(knitr))
+suppressPackageStartupMessages(library(knitr))
+suppressPackageStartupMessages(library(officer))
+suppressPackageStartupMessages(library(flextable))
+
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 raw = readRDS(paste0(relatednessDir,"/All_Relatedness_From_Raw.RDS"))
 raw$`rMaf>30` = as.numeric(raw$`rMaf>30`)
@@ -530,6 +648,11 @@ names(nhri)[3]="#HRI"; names(nhri)[6]="#totalPairs"; nhri=subset(nhri, select = 
 nhri$pHRI = nhri$`#HRI`/nhri$`#totalPairs`
 kable(nhri, caption="proportion of HRI between locations")
 saveRDS(nhri,paste0(relatednessDir,'/Loc_PropHRI.RDS'))
+# doc <- docx()
+# doc <- addTitle(doc, "Between population relatedness")
+# doc <- addFlexTable( doc, FlexTable(nhri))
+# writeDoc(doc, file = paste0(relatednessDir,"/Between_pop_relatedness.docx"))
+
 
 #getting the proportion of HRI between regions
 rawByLoc$region1 = ""; rawByLoc$region2=""
@@ -584,11 +707,20 @@ nhriByRegion=nhriByRegion[order(`%HRI`, decreasing = TRUE),]
 # barplot(nhriByRegion$`%HRI`~nhriByRegion$pairsRegion, ylim=c(0,0.012))
 ggplot(nhriByRegion, aes(x = reorder(pairsRegion, -`%HRI`), y = `%HRI`, fill = `%HRI`)) + 
   geom_bar(stat = "identity") +
-  theme_bw()+
-  theme_linedraw() +
-  theme(axis.text.x = element_text(angle = 60, vjust = 0.5))+
+  theme(axis.text.x = element_text(angle = 60, hjust = 1, face="bold", color="black", size = 5))+
   theme( axis.line = element_line(colour = "black", size = 0.5, linetype = "solid"))+
-  xlab("")
+  xlab("") +
+  theme(
+        plot.background = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()
+    ) +
+    theme(axis.line = element_line(color = 'black', size = 0.5, linetype = 'solid')) +
+    theme( #axis.text.x = element_text(face="bold", color="black"),, size=14
+        axis.text.y = element_text(face="bold", color="black")) #, size=14
+
 
 ```
 
@@ -599,29 +731,57 @@ ggplot(nhriByRegion, aes(x = reorder(pairsRegion, -`%HRI`), y = `%HRI`, fill = `
 ### **10. spatial analysis (drawing connectivity using the proportion of HRI) **     
 ```{r echo=FALSE}  
 suppressPackageStartupMessages(require("raster"))
-
 suppressPackageStartupMessages(require("rgdal"))
 suppressPackageStartupMessages(require("dplyr"))
 suppressPackageStartupMessages(require("data.table"))
-suppressPackageStartupMessages(require(knitr))
+suppressPackageStartupMessages(require("knitr"))
+
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 relatednessTable = readRDS(paste0(relatednessDir,'/Loc_PropHRI.RDS'))
 relatednessTable$LineWidth = relatednessTable$pHRI*150
 gps = fread(paste0(relatednessDir,"/GPScoordinates.txt"))
 gmb = getData(name = "GADM", country = "GMB", level=0)
+sen = getData(name = "GADM", country = "SEN", level=0) 
 
-# creating the site connector lines
-tmp_gps = gps
-names(tmp_gps) = c('Lat','Long','name')
-source(paste0(relatednessDir,"/Get_Lines_Connectors.R"))
-system(sprinft("mkdir -p %s", paste0(relatednessDir,"/SiteConnectors")))
-curvedLines(tmp_gps, paste0(relatednessDir,"/SiteConnectors"))  #note that this requires python3 to be installed on your machine
+# cross-border spatial analysis
+senegam = gps[which(gps$Village!='Brikama' & gps$Village!='Chogen' & gps$Village!='Serrekunda' & gps$Village!='DongoroBa' & gps$Village!='Farafenni' & gps$Village!='Velingara' & gps$Village!='SareSeedy'),]
+plot(sen)
+points(x=senegam$longitude, y=senegam$latitude, pch=19, cex=1.5, col=c('red','red','black','green','green','green')) 
+crossBorder1 = relatednessTable[which(relatednessTable$site1=='Thies' | relatednessTable$site1=='Bounkiling'), ]
+crossBorder2 = relatednessTable[which(relatednessTable$site2=='Thies' | relatednessTable$site2=='Bounkiling'), ]
+crossBorder = rbind(crossBorder1, crossBorder2)
+
+bklg_th = fread(paste0(relatednessDir,"/SiteConnectors/Bounkiling_Thies.csv"))
+r = crossBorder[which(crossBorder$site1=='Thies' & crossBorder$site2=='Bounkiling'),]$LineWidth
+lines(x=bklg_th$long[2000:4002], y=bklg_th$lat[2000:4002], col='darkblue', lwd=r)
+
+bklg_besse = fread(paste0(relatednessDir,"/SiteConnectors/Bounkiling_Besse.csv"))
+r = crossBorder[which(crossBorder$site1=='Besse' & crossBorder$site2=='Bounkiling'),]$LineWidth
+lines(x=bklg_besse$long[1:2000], y=bklg_besse$lat[1:2000], col='darkblue', lwd=r)
+
+th_besse = fread(paste0(relatednessDir,"/SiteConnectors/Thies_Besse.csv"))
+r = crossBorder[which(crossBorder$site1=='Besse' & crossBorder$site2=='Thies'),]$LineWidth
+lines(x=th_besse$long[2000:4002], y=th_besse$lat[2000:4002], col='darkblue', lwd=r)
+
+th_basse = fread(paste0(relatednessDir,"/SiteConnectors/Thies_Basse.csv"))
+r = crossBorder[which(crossBorder$site1=='Basse' & crossBorder$site2=='Thies'),]$LineWidth
+lines(x=th_basse$long[1:2000], y=th_basse$lat[1:2000], col='darkblue', lwd=r)
+
+th_njayel = fread(paste0(relatednessDir,"/SiteConnectors/Thies_Njayel.csv"))
+r = crossBorder[which(crossBorder$site1=='Njayel' & crossBorder$site2=='Thies'),]$LineWidth
+lines(x=th_njayel$long[2000:4002], y=th_njayel$lat[2000:4002], col='darkblue', lwd=r)
+
+th_sw = fread(paste0(relatednessDir,"/SiteConnectors/Thies_SareWuro.csv"))
+r = crossBorder[which(crossBorder$site1=='SareWuro' & crossBorder$site2=='Thies'),]$LineWidth
+lines(x=th_sw$long[1:2000], y=th_sw$lat[1:2000], col='darkblue', lwd=r)
 
 
+# spatial analysis within gambia
 withiGambia1 = relatednessTable[which(relatednessTable$site1!='Thies' & relatednessTable$site1!='Bounkiling'), ]
 withiGambia2 = withiGambia1[which(withiGambia1$site2!='Thies' & withiGambia1$site2!='Bounkiling'), ]
 #withiGambia = distinct(rbind(withiGambia1, withiGambia2))
-gambia = gps[which(gps$Village!='Thies' & gps$Village!='Bounkiling' & gps$Village!='Velingara' & gps$Village!='SareSeedy' & gps$Village!='Serrekunda'),]
+gambia = gps[which(gps$Village!='Thies' & gps$Village!='Bounkiling' & gps$Village!='Serrekunda'),]
+
 
 plot(gmb)
 points(x=gambia$longitude, y=gambia$latitude, pch=19, cex=1.5, col=c('black','black','blue','blue','green','green','green','blue')) 
@@ -744,15 +904,15 @@ for(i in 1:length(njayelAllFiles))
   
 ### **11. Relatedness in eastern Gambia **  
 ```{r echo=FALSE}
-suppressPackageStartupMessages(expr = "")
-require(data.table)
-require(chorddiag)  #devtools::install_github("mattflor/chorddiag")
-require(migest)
-require(arcdiagram)  #devtools::install_github('gastonstat/arcdiagram')
-require(edgebundleR)
-require(igraph)
-require(dplyr)
-require(tidyverse)
+suppressPackageStartupMessages(require(data.table))
+suppressPackageStartupMessages(require(chorddiag))#devtools::install_github("mattflor/chorddiag")
+suppressPackageStartupMessages(require(migest))
+suppressPackageStartupMessages(require(arcdiagram))#devtools::install_github('gastonstat/arcdiagram')
+suppressPackageStartupMessages(require(edgebundleR))
+suppressPackageStartupMessages(require(igraph))
+suppressPackageStartupMessages(require(dplyr))
+suppressPackageStartupMessages(require(tidyverse))
+
 relatednessDir="/Users/km28/Documents/Karim/Karim/Gitlab/Transmission/RelatednessFolder"
 rMatrix = readRDS(paste0(relatednessDir,'/rMatrixFrom_Raw.RDS'))
 meta=fread(paste0(relatednessDir,"/SampleMetadata.txt"))
@@ -867,21 +1027,26 @@ links between isolates from different villages: black
   
 ### **12. stats about the eastern Gambia **  
 ```{r echo=FALSE}
-require("ggpubr")
-require(quantreg)
+suppressPackageStartupMessages(require("ggpubr"))
+suppressPackageStartupMessages(require("quantreg"))
+
 #number of isolates from the 4 villages
 kable(table(coauth1$grp), caption="#isolates from the 4 villages (with r>=0.2)\
 1=J, 2=K, 3=L, 4=M")
 
-#comparing mean IBD between same and different village
+#comparing median IBD between same and different village
 connect2$village="same"
 connect2[which(connect2$villageCode1!=connect2$villageCode2),]$village="different"
 connect2$village = as.factor(connect2$village)
+median(connect2[which(connect2$village=="same"),]$value)
+median(connect2[which(connect2$village=="different"),]$value)
 wilcox.test(value ~ village, data = connect2,exact = FALSE)
 
 ggboxplot(connect2, x = "village", y = "value", 
           color = "village", palette = c("orange", "gray"),
-          ylab = "relatedness", xlab = "villages")
+          ylab = "relatedness", xlab = "villages",
+          font.tickslab = c(14,"bold", "black")) +
+  theme(legend.position = "none")
 
 #identifying pairs from the same village
 sameVillage = connect2[which(connect2$villageCode1==connect2$villageCode2),]
@@ -889,11 +1054,15 @@ sameVillage$compound = "different"
 sameVillage[which(sameVillage$compoundCode1==sameVillage$compoundCode2),]$compound = "same"
 sameVillage$compound = as.factor(sameVillage$compound)
 sameVillage$compound=as.factor(sameVillage$compound)
+median(sameVillage[which(sameVillage$compound=="same"),]$value)
+median(sameVillage[which(sameVillage$compound=="different"),]$value)
 wilcox.test(value ~ compound, data = sameVillage,exact = FALSE)
 
 ggboxplot(sameVillage, x = "compound", y = "value", 
           color = "compound", palette = c("orange", "gray"),
-          ylab = "relatedness", xlab = "compound")
+          ylab = "relatedness", xlab = "compound",
+          font.tickslab = c(14,"bold", "black")) +
+  theme(legend.position = "none")
 
 sameVillage$hri="No"
 sameVillage[which(sameVillage$value>=0.6),]$hri="Yes"

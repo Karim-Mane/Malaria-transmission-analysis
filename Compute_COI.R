@@ -91,12 +91,19 @@ calculateCOI = function()
     p = ggplot(fws_overall, aes(x=Location, y=Fws, fill=Location)) + 
         geom_boxplot() +
         scale_fill_manual(values=c('yellow', 'gray','pink','red','orange','green','brown','blue','seagreen','cyan','black')) +  #,'magenta','gold'
-        theme_bw()+
-        theme_linedraw() +
-        theme(axis.text.x = element_text(angle = 60, vjust = 0.5))+
-        theme( axis.line = element_line(colour = "gray", 
+        theme(axis.text.x = element_text(angle = 60, hjust = 1))+
+        theme( axis.line = element_line(colour = "black", 
                                         size = 0.5, linetype = "solid"),
-               legend.position = "none")
+               legend.position = "none") +
+        theme(
+            plot.background = element_blank(),
+            panel.grid.major = element_blank(),
+            panel.grid.minor = element_blank(),
+            panel.border = element_blank(),
+            panel.background = element_blank()
+        ) +
+        theme(axis.text.x = element_text(face="bold", color="black"), #, size=14
+              axis.text.y = element_text(face="bold", color="black")) #, size=14
     pdf(paste0(outputDir,'/','Fws_COI.pdf'))
     print(p)
     dev.off()
