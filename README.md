@@ -1,6 +1,6 @@
 ---
 title: "Transmission analysis"
-author: "Karim"
+authors: "Karim, David, Alfred"
   
 ---
 # **Studying malaria transmission dynamic in the Senegambia area**
